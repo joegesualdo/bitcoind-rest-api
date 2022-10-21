@@ -134,7 +134,7 @@ async fn main() {
         // HARDCODED
         let price = 22122.0;
         let total_money_supply = 70000.1;
-        let tx_out_set_info = GetTxOutSetInfoCommand::new().call(&bitcoind_request_client);
+        // let tx_out_set_info = GetTxOutSetInfoCommand::new().call(&bitcoind_request_client);
         // let total_money_supply = tx_out_set_info.unwrap().total_amount;
 
         let response = Response {
