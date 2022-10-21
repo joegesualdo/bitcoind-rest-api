@@ -134,7 +134,7 @@ async fn main() {
         // HARDCODED
         let price = 22122.0;
         let total_money_supply = 70000.1;
-        // let tx_out_set_info = GetTxOutSetInfoCommand::new().call(&bitcoind_request_client);
+        let tx_out_set_info = GetTxOutSetInfoCommand::new().call(&bitcoind_request_client);
         // let total_money_supply = tx_out_set_info.unwrap().total_amount;
 
         let response = Response {
@@ -190,6 +190,28 @@ async fn main() {
             let block_stats_response_result = command_with_hash_or_height_and_stats_set.call(&bitcoind_request_client);
             let block_stats = block_stats_response_result.unwrap();
             warp::reply::json(&block_stats)
+        });
+    #[derive(Deserialize)]
+    struct GetTxOutSetInfoQueryParams{
+        hash_type: Option<String>,
+    }
+    // /api/v1/gettxoutsetinfo?hash_type={hash_type}
+    let get_tx_out_set_info_path = warp::get()
+        .and(warp::path("gettxoutsetinfo"))
+        .and(warp::query::<GetTxOutSetInfoQueryParams>())
+        .map(|query_params: GetTxOutSetInfoQueryParams|  {
+            let bitcoind_request_client = get_client();
+            let command = GetTxOutSetInfoCommand::new();
+            let command_with_hash_type_set = match query_params.hash_type{
+                Some(hash_type) => {
+                    todo!()
+                },
+                None => command
+            };
+
+            let get_tx_outset_info_response_result = command_with_hash_type_set.call(&bitcoind_request_client);
+            let tx_out_set_info = get_tx_outset_info_response_result.unwrap();
+            warp::reply::json(&tx_out_set_info)
         });
 
     #[derive(Deserialize)]
@@ -278,6 +300,7 @@ async fn main() {
         .or(api_v1_path.and(get_block_stats_path))
         .or(api_v1_path.and(get_chain_tx_stats_path))
         .or(api_v1_path.and(get_difficulty_path))
+        .or(api_v1_path.and(get_tx_out_set_info_path))
         .with(cors);
 
     warp::serve(routes).run(([127, 0, 0, 1], port)).await;

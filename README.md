@@ -90,6 +90,16 @@ GET /api/v1/getnetworkhashps?n_blocks={nblocks}&height={height}
 
 ---
 
+[gettxoutsetinfo](https://developer.bitcoin.org/reference/rpc/gettxoutsetinfo.html)
+
+> Not: This will take a few seconds (or longer) to return
+
+```
+GET /api/v1/gettxoutsetinfo?hash_type={hash_type}
+```
+
+---
+
 ## Related
 
 - [bitcoind-request](https://github.com/joegesualdo/bitcoind-request) - Type-safe wrapper around bitcoind RPC commands
