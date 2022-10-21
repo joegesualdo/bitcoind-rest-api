@@ -48,6 +48,13 @@ fn get_client() -> BitcoindRequestClient {
 
 #[tokio::main]
 async fn main() {
+    let args: Vec<String> = env::args().collect();
+    let port_arg = args.get(1);
+    let default_port = 3030;
+    let port = match port_arg {
+        Some(port) => port.parse().unwrap(),
+        None => default_port
+    };
     pretty_env_logger::init();
 
     let cors = warp::cors().allow_any_origin();
@@ -273,5 +280,5 @@ async fn main() {
         .or(api_v1_path.and(get_difficulty_path))
         .with(cors);
 
-    warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
+    warp::serve(routes).run(([127, 0, 0, 1], port)).await;
 }
