@@ -100,6 +100,14 @@ GET /api/v1/gettxoutsetinfo?hash_type={hash_type}
 
 ---
 
+[getblockhash](https://developer.bitcoin.org/reference/rpc/getblockhash.html)
+
+```
+GET /api/v1/getblockhash?height={height}
+```
+
+---
+
 ## Related
 
 - [bitcoind-request](https://github.com/joegesualdo/bitcoind-request) - Type-safe wrapper around bitcoind RPC commands

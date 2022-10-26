@@ -9,7 +9,7 @@ use bitcoind_request::{
         get_difficulty::GetDifficultyCommand,
         get_network_hash_ps::GetNetworkHashPsCommand,
         get_tx_out_set_info::GetTxOutSetInfoCommand,
-        CallableCommand,
+        CallableCommand, get_block_hash::GetBlockHashCommand,
     },
     Blockhash,
 };
@@ -253,6 +253,22 @@ async fn main() {
         warp::reply::json(&difficulty)
     });
     #[derive(Deserialize)]
+    struct GetBlockhashQueryParams{
+        height: u64,
+    }
+    // /api/v1/getblockhash?height={height}
+    let get_blockhash_path = warp::get()
+        .and(warp::path("getblockhash"))
+        .and(warp::query::<GetBlockhashQueryParams>())
+        .map(|query_params: GetBlockhashQueryParams|  {
+            let bitcoind_request_client = get_client();
+            let command = GetBlockHashCommand::new(query_params.height);
+            let get_blockhash_response_result = command.call(&bitcoind_request_client);
+            let blockhash = get_blockhash_response_result.unwrap();
+            warp::reply::json(&blockhash)
+        });
+
+    #[derive(Deserialize)]
     struct GetNetworkHashPsQueryParams {
         n_blocks: Option<u64>,
             height: Option<u64>
@@ -296,6 +312,7 @@ async fn main() {
     let routes = root
         .or(api_v1_path.and(dashboard))
         .or(api_v1_path.and(get_network_hash_ps_path))
+        .or(api_v1_path.and(get_blockhash_path))
         .or(api_v1_path.and(get_block_count_path))
         .or(api_v1_path.and(get_block_stats_path))
         .or(api_v1_path.and(get_chain_tx_stats_path))
