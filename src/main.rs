@@ -9,7 +9,7 @@ use bitcoind_request::{
         get_difficulty::GetDifficultyCommand,
         get_network_hash_ps::GetNetworkHashPsCommand,
         get_tx_out_set_info::GetTxOutSetInfoCommand,
-        CallableCommand, get_block_hash::GetBlockHashCommand,
+        CallableCommand, get_block_hash::GetBlockHashCommand, get_block::{GetBlockCommand, GetBlockCommandVerbosity},
     },
     Blockhash,
 };
@@ -305,6 +305,35 @@ async fn main() {
                     .0;
             warp::reply::json(&estimated_hash_rate_for_last_2016_blocks)
       });
+    #[derive(Deserialize)]
+    struct GetBlockQueryParams {
+        blockhash: String,
+            verbosity: Option<u64>
+    }
+    // /api/v1/getnetworkhashps?n_blocks=2016&height=200000
+    let get_block_path = 
+        warp::get()
+        .and(warp::path("getblock"))
+        .and(warp::path::end())
+        .and(warp::query::<GetBlockQueryParams>())
+        .map(|query_params: GetBlockQueryParams|  {
+            let bitcoind_request_client = get_client();
+            let command = GetBlockCommand::new(Blockhash(query_params.blockhash));
+            let command_with_verbosity_set = match query_params.verbosity{
+                Some(verbosity) => 
+                    match verbosity {
+                        0 => command.verbosity(GetBlockCommandVerbosity::SerializedHexEncodedData),
+                        1 => command.verbosity(GetBlockCommandVerbosity::BlockObjectWithoutTransactionInformation),
+                        2 => command.verbosity(GetBlockCommandVerbosity::BlockObjectWithTransactionInformation),
+                        _ => panic!("verbosity {} not supported", verbosity)
+                    },
+                None => command
+            };
+            let get_block_response_result= command_with_verbosity_set.call(&bitcoind_request_client);
+            let block =
+               get_block_response_result.unwrap();
+            warp::reply::json(&block)
+      });
 
     // /
     let root = warp::path::end().map(|| "Welcome!");
@@ -312,6 +341,7 @@ async fn main() {
     let routes = root
         .or(api_v1_path.and(dashboard))
         .or(api_v1_path.and(get_network_hash_ps_path))
+        .or(api_v1_path.and(get_block_path))
         .or(api_v1_path.and(get_blockhash_path))
         .or(api_v1_path.and(get_block_count_path))
         .or(api_v1_path.and(get_block_stats_path))
