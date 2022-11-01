@@ -116,6 +116,14 @@ GET /api/v1/getblock?blockhash={blockhash}&verbosity={verbosity}
 
 ---
 
+[getblockchaininfo](https://developer.bitcoin.org/reference/rpc/getblockchaininfo.html)
+
+```
+GET /api/v1/getblockchaininfo
+```
+
+---
+
 ## Related
 
 - [bitcoind-request](https://github.com/joegesualdo/bitcoind-request) - Type-safe wrapper around bitcoind RPC commands

@@ -9,7 +9,7 @@ use bitcoind_request::{
         get_difficulty::GetDifficultyCommand,
         get_network_hash_ps::GetNetworkHashPsCommand,
         get_tx_out_set_info::GetTxOutSetInfoCommand,
-        CallableCommand, get_block_hash::GetBlockHashCommand, get_block::{GetBlockCommand, GetBlockCommandVerbosity},
+        CallableCommand, get_block_hash::GetBlockHashCommand, get_block::{GetBlockCommand, GetBlockCommandVerbosity}, get_blockchain_info::GetBlockchainInfoCommand,
     },
     Blockhash,
 };
@@ -160,6 +160,13 @@ async fn main() {
         let block_count_result = GetBlockCountCommand::new().call(&bitcoind_request_client);
         let block_count = block_count_result.unwrap().0;
         warp::reply::json(&block_count)
+    });
+    // /api/v1/getblockchaininfo
+    let get_blockchain_info_path = warp::get().and(warp::path("getblockchaininfo")).map(|| {
+        let bitcoind_request_client = get_client();
+        let get_blockchain_info_response_result= GetBlockchainInfoCommand::new().call(&bitcoind_request_client);
+        let blockchain_info = get_blockchain_info_response_result.unwrap();
+        warp::reply::json(&blockchain_info)
     });
     #[derive(Deserialize)]
     struct GetBlockStatsQueryParams {
@@ -342,6 +349,7 @@ async fn main() {
         .or(api_v1_path.and(dashboard))
         .or(api_v1_path.and(get_network_hash_ps_path))
         .or(api_v1_path.and(get_block_path))
+        .or(api_v1_path.and(get_blockchain_info_path))
         .or(api_v1_path.and(get_blockhash_path))
         .or(api_v1_path.and(get_block_count_path))
         .or(api_v1_path.and(get_block_stats_path))
