@@ -39,7 +39,7 @@ To start server at a specified port, pass the PORT argument
 > Could optionally pass the environment variable to the script:
 
 ```shell
- BITCOIND_PASSWORD=... BITCOIND_USERNAME=...BITCOIND_URL=... bitcoin-terminal-dashboard
+ BITCOIND_PASSWORD=... BITCOIND_USERNAME=...BITCOIND_URL=... bitcoind-rest-api
 ```
 
 ## Endpoints
