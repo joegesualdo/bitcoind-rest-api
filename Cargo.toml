@@ -1,6 +1,6 @@
 [package]
 name = "bitcoind-rest-api"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 description = "Request data from Bitcoind through rest api endpoints"
 license = "MIT"

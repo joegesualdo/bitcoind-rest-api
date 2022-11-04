@@ -358,5 +358,5 @@ async fn main() {
         .or(api_v1_path.and(get_tx_out_set_info_path))
         .with(cors);
 
-    warp::serve(routes).run(([127, 0, 0, 1], port)).await;
+    warp::serve(routes).run(([0, 0, 0, 0], port)).await;
 }
