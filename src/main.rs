@@ -1,15 +1,19 @@
 use bitcoind_request::{
     client::Client as BitcoindRequestClient,
     command::{
+        get_block::{GetBlockCommand, GetBlockCommandVerbosity},
         get_block_count::GetBlockCountCommand,
+        get_block_hash::GetBlockHashCommand,
         get_block_stats::{
-            GetBlockStatsCommand, GetBlockStatsCommandResponse, TargetBlockArgument, StatsArgumentChoices,
+            GetBlockStatsCommand, GetBlockStatsCommandResponse, StatsArgumentChoices,
+            TargetBlockArgument,
         },
+        get_blockchain_info::GetBlockchainInfoCommand,
         get_chain_tx_stats::GetChainTxStatsCommand,
         get_difficulty::GetDifficultyCommand,
         get_network_hash_ps::GetNetworkHashPsCommand,
         get_tx_out_set_info::GetTxOutSetInfoCommand,
-        CallableCommand, get_block_hash::GetBlockHashCommand, get_block::{GetBlockCommand, GetBlockCommandVerbosity}, get_blockchain_info::GetBlockchainInfoCommand,
+        CallableCommand,
     },
     Blockhash,
 };
@@ -48,12 +52,21 @@ fn get_client() -> BitcoindRequestClient {
 
 #[tokio::main]
 async fn main() {
+    let is_tls_enabled_env_variable = env::var("IS_TLS_ENABLED");
+    let is_tls_enabled = match is_tls_enabled_env_variable {
+        Ok(is_tls_enabled) => match is_tls_enabled.as_str() {
+            "true" => true,
+            "false" => false,
+            _ => panic!("IS_TLS_ENABLED can only be set to 'true' or 'false'"),
+        },
+        Err(_err) => false,
+    };
     let args: Vec<String> = env::args().collect();
     let port_arg = args.get(1);
     let default_port = 3030;
     let port = match port_arg {
         Some(port) => port.parse().unwrap(),
-        None => default_port
+        None => default_port,
     };
     pretty_env_logger::init();
 
@@ -164,20 +177,21 @@ async fn main() {
     // /api/v1/getblockchaininfo
     let get_blockchain_info_path = warp::get().and(warp::path("getblockchaininfo")).map(|| {
         let bitcoind_request_client = get_client();
-        let get_blockchain_info_response_result= GetBlockchainInfoCommand::new().call(&bitcoind_request_client);
+        let get_blockchain_info_response_result =
+            GetBlockchainInfoCommand::new().call(&bitcoind_request_client);
         let blockchain_info = get_blockchain_info_response_result.unwrap();
         warp::reply::json(&blockchain_info)
     });
     #[derive(Deserialize)]
     struct GetBlockStatsQueryParams {
         hash_or_height: String,
-        stats: Option<Vec<String>>
+        stats: Option<Vec<String>>,
     }
     // /api/v1/getblockstats?hash_or_height={blockhash or height}
     let get_block_stats_path = warp::get()
         .and(warp::path("getblockstats"))
         .and(warp::query::<GetBlockStatsQueryParams>())
-        .map(|query_params: GetBlockStatsQueryParams|  {
+        .map(|query_params: GetBlockStatsQueryParams| {
             let hash_or_height = query_params.hash_or_height;
             let arg = if hash_or_height.chars().count() == 64 {
                 TargetBlockArgument::Hash(Blockhash(hash_or_height))
@@ -187,62 +201,61 @@ async fn main() {
 
             let bitcoind_request_client = get_client();
             let command_with_hash_or_height_set = GetBlockStatsCommand::new(arg);
-            let command_with_hash_or_height_and_stats_set = match query_params.stats{
+            let command_with_hash_or_height_and_stats_set = match query_params.stats {
                 Some(stats) => {
                     todo!()
-                },
-                None => command_with_hash_or_height_set
+                }
+                None => command_with_hash_or_height_set,
             };
 
-            let block_stats_response_result = command_with_hash_or_height_and_stats_set.call(&bitcoind_request_client);
+            let block_stats_response_result =
+                command_with_hash_or_height_and_stats_set.call(&bitcoind_request_client);
             let block_stats = block_stats_response_result.unwrap();
             warp::reply::json(&block_stats)
         });
     #[derive(Deserialize)]
-    struct GetTxOutSetInfoQueryParams{
+    struct GetTxOutSetInfoQueryParams {
         hash_type: Option<String>,
     }
     // /api/v1/gettxoutsetinfo?hash_type={hash_type}
     let get_tx_out_set_info_path = warp::get()
         .and(warp::path("gettxoutsetinfo"))
         .and(warp::query::<GetTxOutSetInfoQueryParams>())
-        .map(|query_params: GetTxOutSetInfoQueryParams|  {
+        .map(|query_params: GetTxOutSetInfoQueryParams| {
             let bitcoind_request_client = get_client();
             let command = GetTxOutSetInfoCommand::new();
-            let command_with_hash_type_set = match query_params.hash_type{
+            let command_with_hash_type_set = match query_params.hash_type {
                 Some(hash_type) => {
                     todo!()
-                },
-                None => command
+                }
+                None => command,
             };
 
-            let get_tx_outset_info_response_result = command_with_hash_type_set.call(&bitcoind_request_client);
+            let get_tx_outset_info_response_result =
+                command_with_hash_type_set.call(&bitcoind_request_client);
             let tx_out_set_info = get_tx_outset_info_response_result.unwrap();
             warp::reply::json(&tx_out_set_info)
         });
 
     #[derive(Deserialize)]
     struct GetChainTxStatsQueryParams {
-       n_blocks: Option<u64>,
-       blockhash: Option<String>
+        n_blocks: Option<u64>,
+        blockhash: Option<String>,
     }
     // /api/v1/getchaintxstats?n_blocks=10000&blockhash=00000000770ebe897270ca5f6d539d8afb4ea4f4e757761a34ca82e17207d886
-    let get_chain_tx_stats_path =
-        warp::path("getchaintxstats")
+    let get_chain_tx_stats_path = warp::path("getchaintxstats")
         .and(warp::query::<GetChainTxStatsQueryParams>())
-        .map(|query_params: GetChainTxStatsQueryParams|  {
+        .map(|query_params: GetChainTxStatsQueryParams| {
             let bitcoind_request_client = get_client();
 
             let command = GetChainTxStatsCommand::new();
             let command_with_n_blocks_set = match query_params.n_blocks {
-                Some(n_blocks) => 
-                    command.set_n_blocks(n_blocks),
-                None => command
+                Some(n_blocks) => command.set_n_blocks(n_blocks),
+                None => command,
             };
-            let command_with_n_blocks_and_blockhash_set = match query_params.blockhash{
-                Some(blockhash) => 
-                    command_with_n_blocks_set.set_blockhash(Blockhash(blockhash)),
-                None => command_with_n_blocks_set
+            let command_with_n_blocks_and_blockhash_set = match query_params.blockhash {
+                Some(blockhash) => command_with_n_blocks_set.set_blockhash(Blockhash(blockhash)),
+                None => command_with_n_blocks_set,
             };
 
             let chain_tx_stats_result =
@@ -260,14 +273,14 @@ async fn main() {
         warp::reply::json(&difficulty)
     });
     #[derive(Deserialize)]
-    struct GetBlockhashQueryParams{
+    struct GetBlockhashQueryParams {
         height: u64,
     }
     // /api/v1/getblockhash?height={height}
     let get_blockhash_path = warp::get()
         .and(warp::path("getblockhash"))
         .and(warp::query::<GetBlockhashQueryParams>())
-        .map(|query_params: GetBlockhashQueryParams|  {
+        .map(|query_params: GetBlockhashQueryParams| {
             let bitcoind_request_client = get_client();
             let command = GetBlockHashCommand::new(query_params.height);
             let get_blockhash_response_result = command.call(&bitcoind_request_client);
@@ -278,69 +291,68 @@ async fn main() {
     #[derive(Deserialize)]
     struct GetNetworkHashPsQueryParams {
         n_blocks: Option<u64>,
-            height: Option<u64>
+        height: Option<u64>,
     }
     // /api/v1/getnetworkhashps?n_blocks=2016&height=200000
-    let get_network_hash_ps_path = 
-        warp::get()
+    let get_network_hash_ps_path = warp::get()
         .and(warp::path("getnetworkhashps"))
         .and(warp::path::end())
         .and(warp::query::<GetNetworkHashPsQueryParams>())
-        .map(|query_params: GetNetworkHashPsQueryParams|  {
+        .map(|query_params: GetNetworkHashPsQueryParams| {
             let bitcoind_request_client = get_client();
             let command = GetNetworkHashPsCommand::new();
             let command_with_n_blocks_set = match query_params.n_blocks {
-                Some(n_blocks) => 
-                    command.set_n_blocks(
-                        bitcoind_request::command::get_network_hash_ps::BlocksToIncludeArg::NBlocks(
-                            n_blocks
-                        ),
+                Some(n_blocks) => command.set_n_blocks(
+                    bitcoind_request::command::get_network_hash_ps::BlocksToIncludeArg::NBlocks(
+                        n_blocks,
                     ),
-                None => command
+                ),
+                None => command,
             };
             let command_with_n_blocks_and_height_set = match query_params.height {
-                Some(height) => 
-                    command_with_n_blocks_set.set_height(
-                        bitcoind_request::command::get_network_hash_ps::HeightArg::Height(height)
-                    ),
-                None => command_with_n_blocks_set
+                Some(height) => command_with_n_blocks_set.set_height(
+                    bitcoind_request::command::get_network_hash_ps::HeightArg::Height(height),
+                ),
+                None => command_with_n_blocks_set,
             };
-            let estimated_hash_rate_response_result_for_last_2016_blocks = command_with_n_blocks_and_height_set.call(&bitcoind_request_client);
+            let estimated_hash_rate_response_result_for_last_2016_blocks =
+                command_with_n_blocks_and_height_set.call(&bitcoind_request_client);
             let estimated_hash_rate_for_last_2016_blocks =
                 estimated_hash_rate_response_result_for_last_2016_blocks
                     .unwrap()
                     .0;
             warp::reply::json(&estimated_hash_rate_for_last_2016_blocks)
-      });
+        });
     #[derive(Deserialize)]
     struct GetBlockQueryParams {
         blockhash: String,
-            verbosity: Option<u64>
+        verbosity: Option<u64>,
     }
     // /api/v1/getnetworkhashps?n_blocks=2016&height=200000
-    let get_block_path = 
-        warp::get()
+    let get_block_path = warp::get()
         .and(warp::path("getblock"))
         .and(warp::path::end())
         .and(warp::query::<GetBlockQueryParams>())
-        .map(|query_params: GetBlockQueryParams|  {
+        .map(|query_params: GetBlockQueryParams| {
             let bitcoind_request_client = get_client();
             let command = GetBlockCommand::new(Blockhash(query_params.blockhash));
-            let command_with_verbosity_set = match query_params.verbosity{
-                Some(verbosity) => 
-                    match verbosity {
-                        0 => command.verbosity(GetBlockCommandVerbosity::SerializedHexEncodedData),
-                        1 => command.verbosity(GetBlockCommandVerbosity::BlockObjectWithoutTransactionInformation),
-                        2 => command.verbosity(GetBlockCommandVerbosity::BlockObjectWithTransactionInformation),
-                        _ => panic!("verbosity {} not supported", verbosity)
-                    },
-                None => command
+            let command_with_verbosity_set = match query_params.verbosity {
+                Some(verbosity) => match verbosity {
+                    0 => command.verbosity(GetBlockCommandVerbosity::SerializedHexEncodedData),
+                    1 => command.verbosity(
+                        GetBlockCommandVerbosity::BlockObjectWithoutTransactionInformation,
+                    ),
+                    2 => command
+                        .verbosity(GetBlockCommandVerbosity::BlockObjectWithTransactionInformation),
+                    _ => panic!("verbosity {} not supported", verbosity),
+                },
+                None => command,
             };
-            let get_block_response_result= command_with_verbosity_set.call(&bitcoind_request_client);
-            let block =
-               get_block_response_result.unwrap();
+            let get_block_response_result =
+                command_with_verbosity_set.call(&bitcoind_request_client);
+            let block = get_block_response_result.unwrap();
             warp::reply::json(&block)
-      });
+        });
 
     // /
     let root = warp::path::end().map(|| "Welcome!");
@@ -358,5 +370,18 @@ async fn main() {
         .or(api_v1_path.and(get_tx_out_set_info_path))
         .with(cors);
 
-    warp::serve(routes).run(([0, 0, 0, 0], port)).await;
+    if is_tls_enabled {
+        let tls_cert_path_env_variable =
+            env::var("TLS_CERT_PATH").expect("TLS_CERT_PATH env variable not set");
+        let tls_key_path_env_variable =
+            env::var("TLS_KEY_PATH").expect("TLS_KEY_PATH env variable not set");
+        warp::serve(routes)
+            .tls()
+            .cert_path(tls_cert_path_env_variable)
+            .key_path(tls_key_path_env_variable)
+            .run(([0, 0, 0, 0], port))
+            .await;
+    } else {
+        warp::serve(routes).run(([0, 0, 0, 0], port)).await;
+    }
 }

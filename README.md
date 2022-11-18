@@ -42,6 +42,14 @@ To start server at a specified port, pass the PORT argument
  BITCOIND_PASSWORD=... BITCOIND_USERNAME=...BITCOIND_URL=... bitcoind-rest-api
 ```
 
+# Serve over HTTPS
+
+To serve over https, must have the following environment variables set:
+
+```
+IS_TLS_ENABLED=true TLS_CERT_PATH="<CERT_PATH_HERE>" TLS_KEY_PATH="<KEY_PATH_HERE>"
+```
+
 ## Endpoints
 
 The endpoints used should map directly to rpc commands and parameters, where the command name is the url path and the arguments are query params. If a rpc argument is optional, then the query param is also optional - and same for required arguments. For example, the [getchaintxstats](https://developer.bitcoin.org/reference/rpc/getchaintxstats.html) command takes two arguments, `nblocks` and `blockhash`, so the url path to request the same information would be `localhost:3030/api/v1/getchaintxstats?nblocks={...}&blockhash={...}`
